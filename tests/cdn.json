@@ -1,0 +1,7 @@
+[
+  { "platform": "jsdelivr", "url": "https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js", "plan": "free public CDN" },
+  { "platform": "cdnjs", "url": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js", "plan": "free public CDN" },
+  { "platform": "unpkg", "url": "https://unpkg.com/jquery@3.7.1/dist/jquery.min.js", "plan": "free public CDN" },
+  { "platform": "google", "url": "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js", "plan": "free public CDN" },
+  { "platform": "jquery", "url": "https://code.jquery.com/jquery-3.7.1.min.js", "plan": "free public CDN" }
+]
