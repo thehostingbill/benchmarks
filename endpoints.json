@@ -1,0 +1,8 @@
+[
+  { "platform": "render", "url": "", "plan": "free web service" },
+  { "platform": "koyeb", "url": "", "plan": "free instance" },
+  { "platform": "vercel", "url": "", "plan": "hobby, node function" },
+  { "platform": "netlify", "url": "", "plan": "free, function" },
+  { "platform": "cloudflare", "url": "", "plan": "workers free (control)" },
+  { "platform": "deno", "url": "", "plan": "deno deploy free" }
+]
