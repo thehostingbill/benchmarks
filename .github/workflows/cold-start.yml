@@ -1,0 +1,43 @@
+name: cold-start
+
+# Every 20 minutes: longer than the 15-minute idle timeout of the sleepiest free tier we test,
+# so each run's first request per platform is a cold-start candidate.
+on:
+  schedule:
+    - cron: "7,27,47 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cold-start
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check out the data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth 1 origin data
+            git worktree add data origin/data
+          else
+            git worktree add --orphan -b data data
+          fi
+      - run: node probe/probe.mjs --endpoints endpoints.json --data data
+      - name: Commit results
+        working-directory: data
+        run: |
+          git config user.name "thb-probe"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -qm "data: probe run ${GITHUB_RUN_ID}"
+          git push origin HEAD:data
