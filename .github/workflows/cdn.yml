@@ -1,0 +1,42 @@
+name: cdn
+
+# 20 shuffled rounds over the free JavaScript CDNs per run, every fresh connection, from a US runner.
+on:
+  schedule:
+    - cron: "13,33,53 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check out the data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth 1 origin data
+            git worktree add data origin/data
+          else
+            git worktree add --orphan -b data data
+          fi
+      - run: node probe/probe.mjs --endpoints tests/cdn.json --data data/cdn --rounds 20
+      - name: Commit results
+        working-directory: data
+        run: |
+          git config user.name "thb-probe"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -qm "data: cdn run ${GITHUB_RUN_ID}"
+          git push origin HEAD:data
