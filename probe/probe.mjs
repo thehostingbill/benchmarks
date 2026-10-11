@@ -1,5 +1,7 @@
-// Usage: node probe/probe.mjs --endpoints endpoints.json --data <dir>
-// One run = for each endpoint, one "first" request (cold candidate) then 3 follow-ups (warm baseline).
+// Usage: node probe/probe.mjs --endpoints endpoints.json --data <dir> [--rounds N]
+// Default: for each endpoint, one "first" request (cold candidate) then 3 follow-ups (warm baseline).
+// --rounds N: N rounds over all endpoints in a freshly shuffled order each round, so no endpoint
+// always goes first.
 // Appends one JSON line per request to <data>/YYYY-MM-DD.jsonl and updates <data>/last.json.
 import https from "node:https";
 import http from "node:http";
@@ -8,7 +10,7 @@ import { readFile, writeFile, appendFile, mkdir } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { parseArgs } from "node:util";
 
-const { values: args } = parseArgs({ options: { endpoints: { type: "string" }, data: { type: "string" } } });
+const { values: args } = parseArgs({ options: { endpoints: { type: "string" }, data: { type: "string" }, rounds: { type: "string" } } });
 const FOLLOW_UPS = 3;
 const TIMEOUT_MS = 60_000;
 
@@ -27,7 +29,7 @@ function timedGet(url) {
         t.total = performance.now() - t0;
         let parsed = null;
         try { parsed = JSON.parse(body); } catch {}
-        resolve({ status: res.statusCode, ms: round(t), body: parsed });
+        resolve({ status: res.statusCode, ms: round(t), bytes: Buffer.byteLength(body), body: parsed });
       });
     });
     req.on("socket", (s) => {
@@ -65,7 +67,17 @@ const run = { run_id: randomUUID(), started: new Date().toISOString(), runner_re
 const day = run.started.slice(0, 10);
 const lines = [];
 
-for (const ep of endpoints) {
+if (args.rounds) {
+  for (let round = 0; round < Number(args.rounds); round++) {
+    const order = [...endpoints].sort(() => Math.random() - 0.5);
+    for (const ep of order) {
+      const r = await timedGet(ep.url);
+      lines.push({ ...run, platform: ep.platform, plan: ep.plan, seq: round, at: new Date().toISOString(), ...r });
+    }
+  }
+}
+
+for (const ep of args.rounds ? [] : endpoints) {
   const prev = last[ep.platform];
   for (let seq = 0; seq <= FOLLOW_UPS; seq++) {
     const r = await timedGet(ep.url);
